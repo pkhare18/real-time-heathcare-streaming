@@ -2,9 +2,10 @@ from kafka import KafkaProducer
 import json
 import time
 import random
+from config.config import KAFKA_BROKER,TOPIC
  
 producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
+    bootstrap_servers=KAFKA_BROKER,
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
  
@@ -18,7 +19,7 @@ while True:
         "interaction_time": time.strftime("%Y-%m-%d %H:%M:%S")
     }
  
-    producer.send("doctor_interactions", value=data) # topic name will be doctor_interactions
+    producer.send(TOPIC, value=data) # topic name will be doctor_interactions
     print(f"Sent: {data}")
  
     time.sleep(2)

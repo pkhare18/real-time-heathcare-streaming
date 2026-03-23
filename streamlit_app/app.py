@@ -1,41 +1,61 @@
 import streamlit as st
-from kafka import KafkaConsumer
-import json
-from collections import defaultdict
+import duckdb
+import time
  
-st.set_page_config(page_title="Healthcare Streaming Dashboard")
+# Page config
+st.set_page_config(page_title="Healthcare Dashboard", layout="wide")
  
-st.title("Real-Time Healthcare Interaction Dashboard")
+st.title("📊 Real-Time Healthcare Interaction Dashboard")
  
-consumer = KafkaConsumer(
-    'doctor_interactions',
-    bootstrap_servers='localhost:9092',
-    auto_offset_reset='latest',
-    group_id='streamlit-group',
-    value_deserializer=lambda x: json.loads(x.decode('utf-8'))
-)
+# Connect to DuckDB
+conn = duckdb.connect("../healthcare.db")
  
-doctor_counts = defaultdict(int)
-rep_counts = defaultdict(int)
-total = 0
- 
+# Auto refresh every 5 seconds
+refresh_interval = 5
 placeholder = st.empty()
  
-for message in consumer:
-    data = message.value
-    print(data)
-    doctor = data["doctor"]
-    rep = data["rep"]
-    
-    doctor_counts[doctor] += 1
-    rep_counts[rep] += 1
-    total += 1
- 
+while True:
     with placeholder.container():
+ 
+        # Total interactions
+        total = conn.execute("SELECT COUNT(*) FROM interactions").fetchone()[0]
         st.metric("Total Interactions", total)
-        st.write("Last event: ",data)
-        st.subheader("Interactions per Doctor")
-        st.bar_chart(dict(doctor_counts))
-        
-        st.subheader("Interactions per Rep")
-        st.bar_chart(dict(rep_counts))
+ 
+        col1, col2 = st.columns(2)
+ 
+        # Doctor Aggregation
+        doctor_df = conn.execute("""
+            SELECT doctor, COUNT(*) as count
+            FROM interactions
+            GROUP BY doctor
+            ORDER BY count DESC
+        """).df()
+ 
+        with col1:
+            st.subheader("👨‍⚕️ Interactions per Doctor")
+            st.bar_chart(doctor_df.set_index("doctor"))
+ 
+        # Rep Aggregation
+        rep_df = conn.execute("""
+            SELECT rep, COUNT(*) as count
+            FROM interactions
+            GROUP BY rep
+            ORDER BY count DESC
+        """).df()
+ 
+        with col2:
+            st.subheader("🧑‍💼 Interactions per Rep")
+            st.bar_chart(rep_df.set_index("rep"))
+ 
+        # Latest records (optional but useful)
+        st.subheader("📌 Latest Interactions")
+        latest_df = conn.execute("""
+            SELECT *
+            FROM interactions
+            ORDER BY interaction_time DESC
+            LIMIT 5
+        """).df()
+ 
+        st.dataframe(latest_df)
+ 
+    time.sleep(refresh_interval)
