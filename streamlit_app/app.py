@@ -1,59 +1,55 @@
 import streamlit as st
+import psycopg2
+import pandas as pd
 import time
- 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 # Page config
 st.set_page_config(page_title="Healthcare Dashboard", layout="wide")
  
 st.title("📊 Real-Time Healthcare Interaction Dashboard")
  
-st.warning("migrating from duckdb to postgresql")
+conn=psycopg2.connect(
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD")
+) 
  
 # Auto refresh every 5 seconds
 refresh_interval = 5
-placeholder = st.empty()
- 
+
 while True:
-    with placeholder.container():
+    try:
+        query_total = "SELECT COUNT(*) FROM interactions"
+        total = pd.read_sql(query_total, conn).iloc[0, 0]
  
-        # Total interactions
-        total = conn.execute("SELECT COUNT(*) FROM interactions").fetchone()[0]
         st.metric("Total Interactions", total)
  
-        col1, col2 = st.columns(2)
- 
-        # Doctor Aggregation
-        doctor_df = conn.execute("""
+        query_doctor = """
             SELECT doctor, COUNT(*) as count
             FROM interactions
             GROUP BY doctor
-            ORDER BY count DESC
-        """).df()
+        """
+        doctor_df = pd.read_sql(query_doctor, conn)
  
-        with col1:
-            st.subheader("👨‍⚕️ Interactions per Doctor")
-            st.bar_chart(doctor_df.set_index("doctor"))
+        st.subheader("Interactions per Doctor")
+        st.bar_chart(doctor_df.set_index("doctor"))
  
-        # Rep Aggregation
-        rep_df = conn.execute("""
+        query_rep = """
             SELECT rep, COUNT(*) as count
             FROM interactions
             GROUP BY rep
-            ORDER BY count DESC
-        """).df()
+        """
+        rep_df = pd.read_sql(query_rep, conn)
  
-        with col2:
-            st.subheader("🧑‍💼 Interactions per Rep")
-            st.bar_chart(rep_df.set_index("rep"))
+        st.subheader("Interactions per Rep")
+        st.bar_chart(rep_df.set_index("rep"))
  
-        # Latest records (optional but useful)
-        st.subheader("📌 Latest Interactions")
-        latest_df = conn.execute("""
-            SELECT *
-            FROM interactions
-            ORDER BY interaction_time DESC
-            LIMIT 5
-        """).df()
- 
-        st.dataframe(latest_df)
+    except Exception as e:
+        st.warning("Waiting for data...")
  
     time.sleep(refresh_interval)
+    st.rerun()

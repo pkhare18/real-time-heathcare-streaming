@@ -15,3 +15,13 @@ services:
     ports:
       - "9092:9092"
       - "9644:9644"
+
+  postgres:
+     image: postgres:15
+     container_name: postgres
+     environment:
+       POSTGRES_USER: admin
+       POSTGRES_PASSWORD: admin
+       POSTGRES_DB: healthcare
+     ports:
+       - "5432:5432"
