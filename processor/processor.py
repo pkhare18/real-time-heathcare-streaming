@@ -1,10 +1,8 @@
 from kafka import KafkaConsumer
 import json
-import duckdb
 from config.config import KAFKA_BROKER, TOPIC
  
-# Connect to DuckDB
-conn = duckdb.connect("../healthcare.db")
+# To be replaced with postgresql
  
 # Create table
 conn.execute("""

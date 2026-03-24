@@ -1,5 +1,4 @@
 import streamlit as st
-import duckdb
 import time
  
 # Page config
@@ -7,8 +6,7 @@ st.set_page_config(page_title="Healthcare Dashboard", layout="wide")
  
 st.title("📊 Real-Time Healthcare Interaction Dashboard")
  
-# Connect to DuckDB
-conn = duckdb.connect("../healthcare.db")
+st.warning("migrating from duckdb to postgresql")
  
 # Auto refresh every 5 seconds
 refresh_interval = 5
